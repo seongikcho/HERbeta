@@ -479,6 +479,7 @@
     const deadRestart    = document.getElementById('deadRestart');
     const clearOverlay   = document.getElementById('clearOverlay');
     const clearRestart   = document.getElementById('clearRestart');
+    const clearSub       = clearOverlay.querySelector('.overlay-sub');
 
     const deadScoreBreakdown = document.getElementById('deadScoreBreakdown');
     const deadScoreFinal     = document.getElementById('deadScoreFinal');
@@ -507,7 +508,7 @@
     let joySmoothY = 0;
 
     const JOY_MAX_OFFSET = 32;  // 중심에서 최대 이동 반경(px)
-    const JOY_DEAD_ZONE = 0.08; // 중앙 근처 무시
+    const JOY_DEAD_ZONE = 0.03; // 중앙 근처 무시(더 민감하게 줄임)
 
     function setKnobCenter() {
       stickKnob.style.transform = 'translate(-50%, -50%)';
@@ -573,13 +574,15 @@
       const offsetY = ny * clamped;
       setKnobOffset(offsetX, offsetY);
 
-      const strength = clamped / JOY_MAX_OFFSET;
+      let strength = clamped / JOY_MAX_OFFSET;
       if (strength < JOY_DEAD_ZONE) {
         joyTargetX = 0;
         joyTargetY = 0;
       } else {
-        joyTargetX = nx * strength;
-        joyTargetY = ny * strength;
+        // 중앙 근처에서 더 민감하게: concave 곡선 적용
+        const curved = Math.pow(strength, 0.7);
+        joyTargetX = nx * curved;
+        joyTargetY = ny * curved;
       }
     }
 
@@ -834,6 +837,10 @@
       upgradeOverlay.classList.add('hidden');
       clearOverlay.classList.add('hidden');
       startOverlay.classList.add('hidden');
+
+      // 패배 상태에서 귀환 버튼 강제 비활성
+      returnButton.classList.add('disabled');
+      returnButton.classList.remove('active');
     }
 
     // ===== 현실로 귀환 / 업그레이드 =====
@@ -852,6 +859,10 @@
 
       updateUpgradeUI();
       upgradeOverlay.classList.remove('hidden');
+
+      // 업그레이드 화면에서는 귀환 버튼 항상 비활성화
+      returnButton.classList.add('disabled');
+      returnButton.classList.remove('active');
     }
 
     function continueToNextStage() {
@@ -869,7 +880,13 @@
       if (gameMode !== 'play') return;
       if (!isGreen) return;
       if (!player || player.hp <= 0) return;
-      moveToUpgrade();
+
+      // 보스 스테이지에서는 귀환 = 클리어
+      if (meta.stageLevel === 4) {
+        onGameClear('bossReturn');
+      } else {
+        moveToUpgrade();
+      }
     }
 
     returnButton.addEventListener('touchstart', (e) => {
@@ -1072,7 +1089,8 @@
         runEnergy += 8;
         stats.totalKills += 1;
         stats.totalEnergyGained += 8;
-        onGameClear();
+        // 보스를 처치해서 클리어
+        onGameClear('bossKill');
       }
     }
 
@@ -1167,7 +1185,7 @@
       }
     }
 
-    function onGameClear() {
+    function onGameClear(reason) {
       gameMode = 'clear';
       enemies      = [];
       bullets      = [];
@@ -1176,6 +1194,19 @@
       isGreen      = false;
       screenFrame.classList.remove('green');
       tutorialHint.classList.add('hidden');
+
+      if (clearSub) {
+        if (reason === 'bossKill') {
+          clearSub.textContent = '자넨 최고의 오서독서가 될 자질을 가졌구만.';
+        } else {
+          // 보스 스테이지에서 귀환 버튼으로 클리어했을 때
+          clearSub.textContent = '자넨 뛰어난 오서독서의 자질을 가졌구만.';
+        }
+      }
+
+      // 클리어 화면에서도 귀환 버튼은 비활성
+      returnButton.classList.add('disabled');
+      returnButton.classList.remove('active');
 
       clearOverlay.classList.remove('hidden');
     }
@@ -1218,8 +1249,8 @@
         }
       }
 
-      // 조이스틱 방향 보간 (부드럽지만 빠르게)
-      const follow = Math.min(1, dt * 24); // dt에 따른 보간 비율
+      // 조이스틱 방향 보간 (더 빠르게 반응)
+      const follow = Math.min(1, dt * 30); // 24 -> 30으로 증가
       joySmoothX += (joyTargetX - joySmoothX) * follow;
       joySmoothY += (joyTargetY - joySmoothY) * follow;
 
