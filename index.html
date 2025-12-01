@@ -102,11 +102,11 @@
       opacity: 0.4;
     }
 
-    /* 모바일 조이스틱 (작게) */
+    /* 모바일 조이스틱 */
     #joystick {
       position: fixed;
       left: 12px;
-      bottom: 18px;
+      bottom: 40px; /* ⬆ 조금 더 위로 올림 */
       width: 90px;
       height: 90px;
       z-index: 10;
@@ -114,10 +114,11 @@
     }
     #stick-base {
       position: absolute;
-      left: 0;
-      bottom: 0;
+      left: 50%;
+      top: 50%;
       width: 80px;
       height: 80px;
+      transform: translate(-50%, -50%); /* 정중앙 배치 */
       border-radius: 50%;
       background: rgba(0,0,0,0.6);
       border: 2px solid rgba(255,255,255,0.2);
@@ -126,10 +127,10 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      width: 34px;
-      height: 34px;
-      margin-left: -17px;
-      margin-top: -17px;
+      width: 40px;      /* 🔵 볼(노브) 크게 */
+      height: 40px;
+      margin-left: -20px;
+      margin-top: -20px;
       border-radius: 50%;
       background: rgba(255,255,255,0.7);
     }
@@ -173,7 +174,7 @@
       touch-action: manipulation;
     }
 
-    /* 튜토리얼 힌트 (크게) */
+    /* 튜토리얼 힌트 */
     #tutorialHint {
       position: fixed;
       left: 50%;
@@ -460,7 +461,7 @@
     let joyDirX = 0;
     let joyDirY = 0;
 
-    // 실제 이동 방향(부드럽게 회전용)
+    // 실제 이동 방향(부드럽게/빠르게 반응용)
     let moveDirX = 0;
     let moveDirY = 0;
     // 조이스틱 세기(0~1)
@@ -530,7 +531,6 @@
         joyDirY = 0;
         joyPower = 0;
       } else {
-        // 방향 벡터
         const len = Math.hypot(nx, ny) || 1;
         joyDirX = nx / len;
         joyDirY = ny / len;
@@ -1173,11 +1173,11 @@
         }
       }
 
-      // ===== 플레이어 이동 (드래그 방향에 빠르게 반응 + 약간의 부드러운 전환) =====
+      // ===== 플레이어 이동: 빠른 반응 + 부드러운 전환 =====
       let targetX = joyDirX;
       let targetY = joyDirY;
+      let tLen = Math.hypot(targetX, targetY);
 
-      const tLen = Math.hypot(targetX, targetY);
       if (tLen > 1e-4) {
         targetX /= tLen;
         targetY /= tLen;
@@ -1186,13 +1186,19 @@
         targetY = 0;
       }
 
-      // 빠른 반응감을 위해 LERP 계수 크게
-      const TURN_LERP = 18; // 값이 클수록 방향 전환이 더 빠름
-      const lerp = Math.min(1, dt * TURN_LERP);
-      moveDirX += (targetX - moveDirX) * lerp;
-      moveDirY += (targetY - moveDirY) * lerp;
+      if (joyPower > 0.7 && tLen > 0) {
+        // 많이 밀었을 때는 즉시 방향 스냅 (렉 느낌 줄이기)
+        moveDirX = targetX;
+        moveDirY = targetY;
+      } else {
+        // 살짝 조작일 땐 부드러운 보간
+        const TURN_LERP = 14;
+        const lerp = Math.min(1, dt * TURN_LERP);
+        moveDirX += (targetX - moveDirX) * lerp;
+        moveDirY += (targetY - moveDirY) * lerp;
+      }
 
-      // 입력이 없으면 비교적 빨리 감쇠해 멈추게
+      // 입력이 없을 때는 서서히 감속
       if (joyPower === 0 && tLen === 0) {
         const DAMP = Math.min(1, dt * 12);
         moveDirX *= (1 - DAMP);
@@ -1205,11 +1211,9 @@
       if (mLen > 1e-3) {
         mvx /= mLen;
         mvy /= mLen;
-
-        // 손가락 거리에 따라 속도 조절 (최소 50% ~ 최대 100%)
+        // 손가락 거리(joyPower)에 따라 속도 비율 조절 (최소 50% ~ 최대 100%)
         const speedFactor = 0.5 + 0.5 * joyPower;
         const speed = getPlayerSpeed() * speedFactor;
-
         player.x += mvx * speed * dt;
         player.y += mvy * speed * dt;
       }
