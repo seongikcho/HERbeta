@@ -1283,7 +1283,7 @@
         if (spawnTimer <= 0) {
           spawnEnemy();
           spawnEnemy(); // 기본 2배 스폰
-          const diffMul = 1 + 0.2 * meta.stageLevel + 0.45 * cycleCount;
+          const diffMul = 1 + 0.2 * meta.stageLevel + 0.3 * cycleCount;
           spawnTimer = (BASE_SPAWN_INTERVAL / diffMul) * (0.7 + Math.random() * 0.6);
         }
       }
@@ -1691,6 +1691,7 @@
   </script>
 </body>
 </html>
+
 
 
 
