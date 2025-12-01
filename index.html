@@ -9,6 +9,10 @@
   <style>
     * { box-sizing: border-box; padding: 0; margin: 0; }
 
+    :root {
+      --control-height: 130px; /* 하단 컨트롤 영역 높이 (플레이어가 내려가지 못하는 구역) */
+    }
+
     html, body {
       width: 100%;
       height: 100%;
@@ -19,32 +23,17 @@
       touch-action: none;
     }
 
-    body {
-      display: flex;
-      flex-direction: column;
-      background: #000;
-    }
-
-    /* ==== 게임 영역 (위쪽) ==== */
-    #game-wrap {
-      position: relative;
-      flex: 1 1 auto;
-      width: 100%;
-      background: #000;
-      overflow: hidden;
-    }
-
-    canvas#game {
-      width: 100%;
-      height: 100%;
+    canvas {
+      width: 100vw;
+      height: 100vh;
       display: block;
       background: #000;
       touch-action: none;
     }
 
-    /* ==== HUD (게임 영역 안에서만 표시) ==== */
+    /* HUD */
     #hud {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       width: 100%;
@@ -55,7 +44,6 @@
       text-shadow: 0 0 6px rgba(0,0,0,0.9);
       z-index: 11;
     }
-
     #hud-top {
       display: flex;
       flex-direction: column;
@@ -64,15 +52,13 @@
       font-size: 16px;
       margin-bottom: 4px;
     }
-
     #hud-hp {
       font-size: 18px;
       font-weight: 700;
       color: #ff5555;
     }
-
     #hud-timer {
-      position: absolute;
+      position: fixed;
       top: 8px;
       left: 50%;
       transform: translateX(-50%);
@@ -81,60 +67,94 @@
       text-shadow: 0 0 8px rgba(0,0,0,0.9);
       z-index: 12;
     }
-
     #hud-stage {
       font-size: 14px;
       opacity: 0.9;
     }
-
     #hud-energy {
       font-size: 12px;
       opacity: 0.85;
     }
 
-    /* 게임 화면 테두리 (달 초록일 때) */
-    #screenFrame {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      border: 3px solid transparent;
-      box-shadow: none;
-      z-index: 9;
-    }
-    #screenFrame.green {
-      border-color: rgba(0,255,153,0.75);
-      box-shadow: 0 0 22px rgba(0,255,153,0.8);
-      animation: greenPulse 0.5s infinite alternate;
-    }
-    @keyframes greenPulse {
-      0% { opacity: 0.25; }
-      100% { opacity: 1; }
+    /* 하단 컨트롤 바 (조이스틱 + 귀환 버튼) */
+    #controlBar {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: var(--control-height);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 16px 16px;
+      background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0));
+      pointer-events: none;    /* 내부 요소만 클릭 가능 */
+      z-index: 14;
     }
 
-    /* 튜토리얼 힌트 (게임 영역 중앙) */
-    #tutorialHint {
+    /* 귀환 버튼 */
+    #returnButton {
+      position: relative;
+      width: 130px;
+      height: 52px;
+      border-radius: 12px;
+      background: #222;
+      border: 2px solid #555;
+      color: #f5f5f5;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(0,0,0,0.7);
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      pointer-events: auto;
+    }
+    #returnButton.active {
+      background: #0f3f2a;
+      border-color: #00ff99;
+      box-shadow: 0 0 18px rgba(0,255,153,0.7);
+    }
+    #returnButton.disabled {
+      opacity: 0.4;
+    }
+
+    /* 모바일 조이스틱 (조금 위로, 손가락 가림 줄이기) */
+    #joystick {
+      position: relative;
+      width: 98px;
+      height: 98px;
+      touch-action: none;
+      pointer-events: auto;
+    }
+    #stick-base {
       position: absolute;
       left: 50%;
       top: 50%;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
       transform: translate(-50%, -50%);
-      padding: 20px 24px;
-      background: rgba(0,0,0,0.9);
-      border-radius: 12px;
-      border: 2px solid #00ff99;
-      font-size: 16px;
-      line-height: 1.7;
-      text-align: center;
-      max-width: 340px;
-      z-index: 15;
-      box-shadow: 0 0 18px rgba(0,255,153,0.5);
+      background: rgba(0,0,0,0.6);
+      border: 2px solid rgba(255,255,255,0.25);
     }
-    #tutorialHint.hidden {
-      display: none;
+    #stick-knob {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255,255,255,0.78);
     }
 
-    /* 오버레이 공통 (게임 영역을 덮음) */
+    /* 오버레이 공통 */
     .overlay {
-      position: absolute;
+      position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.88);
       display: flex;
@@ -169,6 +189,27 @@
       font-weight: 600;
       box-shadow: 0 0 12px rgba(0,255,153,0.7);
       touch-action: manipulation;
+    }
+
+    /* 튜토리얼 힌트 (크게) */
+    #tutorialHint {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 24px;
+      background: rgba(0,0,0,0.9);
+      border-radius: 12px;
+      border: 2px solid #00ff99;
+      font-size: 16px;
+      line-height: 1.7;
+      text-align: center;
+      max-width: 340px;
+      z-index: 15;
+      box-shadow: 0 0 18px rgba(0,255,153,0.5);
+    }
+    #tutorialHint.hidden {
+      display: none;
     }
 
     /* 업그레이드 화면 */
@@ -214,10 +255,42 @@
       align-self: center;
     }
 
+    /* 초록 달일 때 전체 화면 테두리 */
+    #screenFrame {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      border: 3px solid transparent;
+      box-shadow: none;
+      z-index: 9;
+    }
+    #screenFrame.green {
+      border-color: rgba(0,255,153,0.75);
+      box-shadow: 0 0 22px rgba(0,255,153,0.8);
+      animation: greenPulse 0.5s infinite alternate;
+    }
+    @keyframes greenPulse {
+      0% { opacity: 0.25; }
+      100% { opacity: 1; }
+    }
+
+    /* 하단 작은 안내 (컨트롤 위쪽에 표시) */
+    #smallHint {
+      position: fixed;
+      bottom: calc(var(--control-height) + 6px);
+      width: 100%;
+      text-align: center;
+      font-size: 11px;
+      opacity: 0.6;
+      pointer-events: none;
+      text-shadow: 0 0 4px rgba(0,0,0,0.8);
+      z-index: 10;
+    }
+
     /* 패배 스코어 */
     #deadScoreWrap {
-      margin-top: 8px;
-      margin-bottom: 28px;
+      margin-top: 8px;       /* 설명 텍스트와 간격 */
+      margin-bottom: 28px;   /* 최종 스코어와 버튼 사이 간격 */
       text-align: center;
     }
     #deadScoreBreakdown {
@@ -234,226 +307,135 @@
       text-shadow: 0 0 12px rgba(0,255,204,0.9);
       letter-spacing: 0.04em;
     }
-
-    /* ==== 컨트롤 바 (아래쪽) ==== */
-    #control-bar {
-      position: relative;
-      width: 100%;
-      height: 130px;
-      background: linear-gradient(to top, #050505, #000000);
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      padding: 10px 16px 18px;
-      z-index: 30;
-      touch-action: none;
-    }
-
-    /* 조이스틱 (왼쪽) */
-    #joystick {
-      width: 110px;
-      height: 110px;
-      touch-action: none;
-    }
-
-    #stick-base {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.6);
-      border: 2px solid rgba(255,255,255,0.25);
-      box-shadow: 0 0 10px rgba(0,0,0,0.8);
-    }
-
-    #stick-knob {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.85);
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 12px rgba(0,0,0,0.8);
-    }
-
-    /* 귀환 버튼 (오른쪽) */
-    #returnButton {
-      width: 140px;
-      height: 56px;
-      border-radius: 14px;
-      background: #222;
-      border: 2px solid #555;
-      color: #f5f5f5;
-      font-size: 13px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      box-shadow: 0 0 10px rgba(0,0,0,0.7);
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: manipulation;
-    }
-    #returnButton.active {
-      background: #0f3f2a;
-      border-color: #00ff99;
-      box-shadow: 0 0 18px rgba(0,255,153,0.7);
-    }
-    #returnButton.disabled {
-      opacity: 0.4;
-    }
-
-    /* 하단 안내 문구 (컨트롤바 안 중앙) */
-    #smallHint {
-      position: absolute;
-      bottom: 4px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      text-align: center;
-      font-size: 11px;
-      opacity: 0.7;
-      pointer-events: none;
-      text-shadow: 0 0 4px rgba(0,0,0,0.8);
-    }
   </style>
 </head>
 <body>
-  <!-- 위쪽: 게임 화면 -->
-  <div id="game-wrap">
-    <canvas id="game"></canvas>
+  <canvas id="game"></canvas>
 
-    <div id="screenFrame"></div>
+  <div id="screenFrame"></div>
 
-    <!-- HUD -->
-    <div id="hud">
-      <div id="hud-top">
-        <div id="hud-hp">HP 100</div>
-        <div id="hud-stage">Stage 1 (회색지대)</div>
-      </div>
-      <div id="hud-timer">00:00</div>
-      <div id="hud-energy">에너지: 0 | 총: 0</div>
+  <!-- HUD -->
+  <div id="hud">
+    <div id="hud-top">
+      <div id="hud-hp">HP 100</div>
+      <div id="hud-stage">Stage 1 (회색지대)</div>
     </div>
-
-    <!-- 튜토리얼 힌트 -->
-    <div id="tutorialHint" class="hidden">
-      달이 초록색으로 변했을 때<br>
-      <span style="color:#00ff99;font-weight:700;">오른쪽 아래 버튼</span>을 눌러야<br>
-      현실로 귀환할 수 있습니다.
-    </div>
-
-    <!-- 시작 화면 -->
-    <div id="startOverlay" class="overlay">
-      <div class="overlay-title">HER</div>
-      <div class="overlay-sub">
-        회색지대에서 29.5초를 버티고,<br>
-        달이 초록색일 때 현실로 귀환하세요.<br><br>
-        완전히 패배하면 모든 업그레이드와<br>
-        스테이지가 초기화됩니다.
-      </div>
-      <button id="startButton" class="overlay-btn">터치해서 시작</button>
-    </div>
-
-    <!-- 업그레이드 화면 -->
-    <div id="upgradeOverlay" class="overlay hidden">
-      <div class="overlay-title">현실 - 무기 업그레이드</div>
-      <div id="upgradeStats"></div>
-
-      <button class="upgrade-button" data-upgrade="attack">
-        <div class="upgrade-title-line">
-          <span>공격력 증가</span><span>[10 에너지]</span>
-        </div>
-        <div class="upgrade-desc">총알과 근접 공격의 피해량이 증가합니다.</div>
-      </button>
-
-      <button class="upgrade-button" data-upgrade="fireRate">
-        <div class="upgrade-title-line">
-          <span>발사 간격 감소</span><span>[10 에너지]</span>
-        </div>
-        <div class="upgrade-desc">탄환/근접 공격 사이의 대기 시간이 감소합니다.</div>
-      </button>
-
-      <button class="upgrade-button" data-upgrade="moveSpeed">
-        <div class="upgrade-title-line">
-          <span>이동 속도 증가</span><span>[10 에너지]</span>
-        </div>
-        <div class="upgrade-desc">회색지대에서의 이동 속도가 빨라집니다.</div>
-      </button>
-
-      <button id="upgradeContinue" class="overlay-btn">회색지대로 돌아가기 (다음 스테이지)</button>
-    </div>
-
-    <!-- 패배 화면 -->
-    <div id="deadOverlay" class="overlay hidden">
-      <div class="overlay-title">완전 패배</div>
-      <div class="overlay-sub">
-        회색지대에서 목숨을 잃었습니다.<br>
-        지금까지 모은 업그레이드와 스테이지가<br>
-        모두 초기화됩니다.
-      </div>
-
-      <div id="deadScoreWrap">
-        <div id="deadScoreBreakdown"></div>
-        <div id="deadScoreFinal"></div>
-      </div>
-
-      <button id="deadRestart" class="overlay-btn">처음부터 다시</button>
-    </div>
-
-    <!-- 최종 클리어 -->
-    <div id="clearOverlay" class="overlay hidden">
-      <div class="overlay-title">HER - 회색지대 탈출</div>
-      <div class="overlay-sub">
-        자넨 아주 뛰어난 오서독서의 자질을 갖췄구만.
-      </div>
-      <button id="clearRestart" class="overlay-btn">처음부터 다시</button>
-    </div>
+    <div id="hud-timer">00:00</div>
+    <div id="hud-energy">에너지: 0 | 총: 0</div>
   </div>
 
-  <!-- 아래쪽: 컨트롤 바 (조이스틱 + 귀환 버튼) -->
-  <div id="control-bar">
+  <!-- 하단 안내 -->
+  <div id="smallHint">왼쪽 동그라미를 드래그해서 이동, 달이 초록색일 때 오른쪽 버튼으로 현실로 귀환</div>
+
+  <!-- 컨트롤 바 (조이스틱 + 귀환 버튼) -->
+  <div id="controlBar">
+    <!-- 모바일 조이스틱 -->
     <div id="joystick">
-      <div id="stick-base">
-        <div id="stick-knob"></div>
-      </div>
+      <div id="stick-base"></div>
+      <div id="stick-knob"></div>
     </div>
 
+    <!-- 귀환 버튼 -->
     <div id="returnButton" class="disabled">현실로 귀환</div>
+  </div>
 
-    <div id="smallHint">
-      왼쪽 조이스틱으로 이동, 달이 초록색일 때 오른쪽 버튼으로 현실로 귀환
+  <!-- 튜토리얼 힌트 -->
+  <div id="tutorialHint" class="hidden">
+    달이 초록색으로 변했을 때<br>
+    <span style="color:#00ff99;font-weight:700;">오른쪽 아래 버튼</span>을 눌러야<br>
+    현실로 귀환할 수 있습니다.
+  </div>
+
+  <!-- 시작 화면 -->
+  <div id="startOverlay" class="overlay">
+    <div class="overlay-title">HER</div>
+    <div class="overlay-sub">
+      회색지대에서 29.5초를 버티고,<br>
+      달이 초록색일 때 현실로 귀환하세요.<br><br>
+      완전히 패배하면 모든 업그레이드와<br>
+      스테이지가 초기화됩니다.
     </div>
+    <button id="startButton" class="overlay-btn">터치해서 시작</button>
+  </div>
+
+  <!-- 업그레이드 화면 -->
+  <div id="upgradeOverlay" class="overlay hidden">
+    <div class="overlay-title">현실 - 무기 업그레이드</div>
+    <div id="upgradeStats"></div>
+
+    <button class="upgrade-button" data-upgrade="attack">
+      <div class="upgrade-title-line">
+        <span>공격력 증가</span><span>[10 에너지]</span>
+      </div>
+      <div class="upgrade-desc">총알과 근접 공격의 피해량이 증가합니다.</div>
+    </button>
+
+    <button class="upgrade-button" data-upgrade="fireRate">
+      <div class="upgrade-title-line">
+        <span>발사 간격 감소</span><span>[10 에너지]</span>
+      </div>
+      <div class="upgrade-desc">탄환/근접 공격 사이의 대기 시간이 감소합니다.</div>
+    </button>
+
+    <button class="upgrade-button" data-upgrade="moveSpeed">
+      <div class="upgrade-title-line">
+        <span>이동 속도 증가</span><span>[10 에너지]</span>
+      </div>
+      <div class="upgrade-desc">회색지대에서의 이동 속도가 빨라집니다.</div>
+    </button>
+
+    <button id="upgradeContinue" class="overlay-btn">회색지대로 돌아가기 (다음 스테이지)</button>
+  </div>
+
+  <!-- 패배 화면 -->
+  <div id="deadOverlay" class="overlay hidden">
+    <div class="overlay-title">완전 패배</div>
+    <div class="overlay-sub">
+      회색지대에서 목숨을 잃었습니다.<br>
+      지금까지 모은 업그레이드와 스테이지가<br>
+      모두 초기화됩니다.
+    </div>
+
+    <!-- 스코어 표시 영역 -->
+    <div id="deadScoreWrap">
+      <div id="deadScoreBreakdown"></div>
+      <div id="deadScoreFinal"></div>
+    </div>
+
+    <button id="deadRestart" class="overlay-btn">처음부터 다시</button>
+  </div>
+
+  <!-- 최종 클리어 -->
+  <div id="clearOverlay" class="overlay hidden">
+    <div class="overlay-title">HER - 회색지대 탈출</div>
+    <div class="overlay-sub">
+      자넨 아주 뛰어난 오서독서의 자질을 갖췄구만.
+    </div>
+    <button id="clearRestart" class="overlay-btn">처음부터 다시</button>
   </div>
 
   <!-- 음산 BGM (bgm.mp3를 같은 폴더에 두면 재생됨) -->
   <audio id="bgm" src="bgm.mp3" loop></audio>
 
   <script>
-    // ===== 캔버스 / 게임 영역 =====
-    const gameWrap = document.getElementById('game-wrap');
+    // ===== 캔버스 =====
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-
-    let viewW = 0;
-    let viewH = 0;
+    let viewW = window.innerWidth;
+    let viewH = window.innerHeight;
 
     function resizeCanvas() {
-      if (!gameWrap) return;
-      const rect = gameWrap.getBoundingClientRect();
-      const dpr = Math.min(1.5, window.devicePixelRatio || 1); // 모바일 성능 보호용
-      viewW = rect.width;
-      viewH = rect.height;
+      const dpr = window.devicePixelRatio || 1;
+      viewW = window.innerWidth;
+      viewH = window.innerHeight;
       canvas.width = viewW * dpr;
       canvas.height = viewH * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-
     window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('orientationchange', resizeCanvas);
     resizeCanvas();
+
+    const PLAYABLE_BOTTOM_MARGIN = 130; // 하단 컨트롤 영역만큼은 내려가지 못하게
 
     // ===== UI 요소 =====
     const hudHp     = document.getElementById('hud-hp');
@@ -479,10 +461,11 @@
     const deadRestart    = document.getElementById('deadRestart');
     const clearOverlay   = document.getElementById('clearOverlay');
     const clearRestart   = document.getElementById('clearRestart');
-    const clearSub       = clearOverlay.querySelector('.overlay-sub');
 
     const deadScoreBreakdown = document.getElementById('deadScoreBreakdown');
     const deadScoreFinal     = document.getElementById('deadScoreFinal');
+
+    const clearSub = clearOverlay.querySelector('.overlay-sub');
 
     const bgm = document.getElementById('bgm');
     let bgmStarted = false;
@@ -502,23 +485,17 @@
     let joyCenterX = 0;
     let joyCenterY = 0;
 
-    let joyTargetX = 0;   // -1 ~ 1
+    let joyTargetX = 0;  // -1 ~ 1 (거리 포함)
     let joyTargetY = 0;
-    let joySmoothX = 0;   // 부드러운 보간 결과
+    let joySmoothX = 0;  // 부드럽게 따라가는 값
     let joySmoothY = 0;
 
-    const JOY_MAX_OFFSET = 32;  // 중심에서 최대 이동 반경(px)
-    const JOY_DEAD_ZONE = 0.03; // 중앙 근처 무시(더 민감하게 줄임)
+    const JOY_MAX_OFFSET = 32;  // 중심에서 최대 거리(px)
+    const JOY_DEAD_ZONE  = 0.03; // 중앙 데드존 (상대값)
 
-    function setKnobCenter() {
-      stickKnob.style.transform = 'translate(-50%, -50%)';
-    }
-
-    function setKnobOffset(dx, dy) {
-      // dx, dy: 중심 기준 px 오프셋
-      stickKnob.style.transform =
-        'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
-    }
+    let prevJoyTargetX = 0;
+    let prevJoyTargetY = 0;
+    let joySpeedBoost  = 0;     // 드래그 속도 기반 가속
 
     function resetJoystick() {
       joyActive = false;
@@ -527,7 +504,11 @@
       joyTargetY = 0;
       joySmoothX = 0;
       joySmoothY = 0;
-      setKnobCenter();
+      prevJoyTargetX = 0;
+      prevJoyTargetY = 0;
+      joySpeedBoost = 0;
+      stickKnob.style.left = '50%';
+      stickKnob.style.top  = '50%';
     }
 
     function joystickTouchStart(e) {
@@ -559,31 +540,27 @@
       const dy = t.clientY - joyCenterY;
       const dist = Math.hypot(dx, dy);
 
-      if (dist === 0) {
-        joyTargetX = 0;
-        joyTargetY = 0;
-        setKnobCenter();
-        return;
-      }
+      let nx = 0, ny = 0, r = 0;
+      const maxR = JOY_MAX_OFFSET;
 
-      const clamped = Math.min(dist, JOY_MAX_OFFSET);
-      const nx = dx / dist;
-      const ny = dy / dist;
+      if (dist > 0) {
+        const clamped = Math.min(dist, maxR);
+        nx = dx / dist;
+        ny = dy / dist;
+        r = clamped / maxR;   // 0 ~ 1
 
-      const offsetX = nx * clamped;
-      const offsetY = ny * clamped;
-      setKnobOffset(offsetX, offsetY);
-
-      let strength = clamped / JOY_MAX_OFFSET;
-      if (strength < JOY_DEAD_ZONE) {
-        joyTargetX = 0;
-        joyTargetY = 0;
+        const knobX = joyCenterX + nx * clamped;
+        const knobY = joyCenterY + ny * clamped;
+        const rect = stickBase.getBoundingClientRect();
+        stickKnob.style.left = ((knobX - rect.left) / rect.width * 100) + '%';
+        stickKnob.style.top  = ((knobY - rect.top)  / rect.height * 100) + '%';
       } else {
-        // 중앙 근처에서 더 민감하게: concave 곡선 적용
-        const curved = Math.pow(strength, 0.7);
-        joyTargetX = nx * curved;
-        joyTargetY = ny * curved;
+        stickKnob.style.left = '50%';
+        stickKnob.style.top  = '50%';
       }
+
+      joyTargetX = nx * r;
+      joyTargetY = ny * r;
     }
 
     function joystickTouchEnd(e) {
@@ -725,6 +702,7 @@
       }
     }
 
+    // 패배 시 스코어 UI 업데이트
     function updateDeadScoreUI() {
       if (!deadScoreBreakdown || !deadScoreFinal) return;
 
@@ -810,6 +788,7 @@
 
     function hardRestart() {
       resetAllProgress();
+      // 새 생명 시작이므로 스코어도 초기화
       stats.totalKills = 0;
       stats.totalSurvivalTime = 0;
       stats.totalEnergyGained = 0;
@@ -819,7 +798,10 @@
     function onPlayerDead() {
       gameMode = 'dead';
 
+      // 먼저 스코어 계산해서 화면에 반영
       updateDeadScoreUI();
+
+      // 패배 시 진행 정보 리셋 (메타/스테이지/업그레이드)
       resetAllProgress();
 
       enemies      = [];
@@ -833,14 +815,13 @@
       tutorialHint.classList.add('hidden');
       resetJoystick();
 
+      returnButton.classList.add('disabled');
+      returnButton.classList.remove('active');
+
       deadOverlay.classList.remove('hidden');
       upgradeOverlay.classList.add('hidden');
       clearOverlay.classList.add('hidden');
       startOverlay.classList.add('hidden');
-
-      // 패배 상태에서 귀환 버튼 강제 비활성
-      returnButton.classList.add('disabled');
-      returnButton.classList.remove('active');
     }
 
     // ===== 현실로 귀환 / 업그레이드 =====
@@ -860,7 +841,7 @@
       updateUpgradeUI();
       upgradeOverlay.classList.remove('hidden');
 
-      // 업그레이드 화면에서는 귀환 버튼 항상 비활성화
+      // 업그레이드 화면에서는 귀환 버튼 비활성 상태 유지
       returnButton.classList.add('disabled');
       returnButton.classList.remove('active');
     }
@@ -876,14 +857,39 @@
       continueToNextStage();
     });
 
+    function onGameClear(mode) {
+      gameMode = 'clear';
+      enemies      = [];
+      bullets      = [];
+      enemyBullets = [];
+      energies     = [];
+      isGreen      = false;
+      screenFrame.classList.remove('green');
+      tutorialHint.classList.add('hidden');
+
+      if (clearSub) {
+        if (mode === 'kill') {
+          clearSub.textContent = '자넨 최고의 오서독서가 될 자질을 가졌구만.';
+        } else {
+          clearSub.textContent = '자넨 아주 뛰어난 오서독서의 자질을 갖췄구만.';
+        }
+      }
+
+      resetJoystick();
+      returnButton.classList.add('disabled');
+      returnButton.classList.remove('active');
+
+      clearOverlay.classList.remove('hidden');
+    }
+
     function handleReturnButton() {
       if (gameMode !== 'play') return;
       if (!isGreen) return;
       if (!player || player.hp <= 0) return;
 
-      // 보스 스테이지에서는 귀환 = 클리어
+      // 보스 스테이지에서 귀환 버튼 → 탈출 엔딩 (엔딩 A)
       if (meta.stageLevel === 4) {
-        onGameClear('bossReturn');
+        onGameClear('escape');
       } else {
         moveToUpgrade();
       }
@@ -914,7 +920,9 @@
       startGameFromTitle();
     }, {passive:false});
 
+    // ▼ 여기부터 "처음부터 다시" 완전 재시작 로직 ▼
     function restartFromScratch() {
+      // 해시로 '재시작 모드' 표시 후 새로고침
       location.hash = '#restart';
       location.reload();
     }
@@ -939,32 +947,36 @@
       return 1;
     }
 
+    // 1~4 스테이지 전부: 첫 귀환을 안 하고 29.5초 이상 버틸수록 상위 적 등장
     function chooseEnemyType() {
-      let stage = meta.stageLevel;
+      const baseStage = meta.stageLevel; // 0~4
+      let effectiveStage = baseStage;
 
-      if (stage === 0) {
-        if (cycleCount >= 2) stage = 2;
-        else if (cycleCount >= 1) stage = 1;
+      // 첫 번째, 두 번째 사이클 버틸수록 상위 스테이지 적 풀로 스케일 업
+      if (cycleCount >= 2) {
+        effectiveStage += 2;
+      } else if (cycleCount >= 1) {
+        effectiveStage += 1;
       }
 
-      if (stage >= 4) stage = 3;
+      if (effectiveStage >= 4) effectiveStage = 3; // 보스 스테이지는 제외하고 0~3까지만
 
       const r = Math.random();
-      if (stage === 0) {
+      if (effectiveStage === 0) {
         return 'dasher';
-      } else if (stage === 1) {
+      } else if (effectiveStage === 1) {
         if (r < 0.6) return 'dasher';
         return 'fast';
-      } else if (stage === 2) {
+      } else if (effectiveStage === 2) {
         if (r < 0.4) return 'dasher';
         else if (r < 0.7) return 'fast';
         else return 'slow';
-      } else {
+      } else { // 3
         if (r < 0.30) return 'dasher';
         else if (r < 0.55) return 'fast';
         else if (r < 0.75) return 'slow';
         else if (r < 0.88) return 'runner';
-        else return 'spreader';
+        else return 'spreader'; // 12%
       }
     }
 
@@ -1072,6 +1084,12 @@
       boss.x += (dx / dist) * speed * dt;
       boss.y += (dy / dist) * speed * dt;
 
+      // 위/아래 벽 적용
+      const topMargin = 12;
+      boss.x = Math.max(boss.radius, Math.min(viewW - boss.radius, boss.x));
+      boss.y = Math.max(boss.radius + topMargin,
+                        Math.min(viewH - PLAYABLE_BOTTOM_MARGIN - boss.radius, boss.y));
+
       const pd = Math.hypot(player.x - boss.x, player.y - boss.y);
       if (pd < player.radius + boss.radius) {
         damagePlayer(BOSS_CONTACT_DPS * dt);
@@ -1089,8 +1107,8 @@
         runEnergy += 8;
         stats.totalKills += 1;
         stats.totalEnergyGained += 8;
-        // 보스를 처치해서 클리어
-        onGameClear('bossKill');
+        // 보스를 처치해서 클리어 → 엔딩 B
+        onGameClear('kill');
       }
     }
 
@@ -1185,36 +1203,23 @@
       }
     }
 
-    function onGameClear(reason) {
-      gameMode = 'clear';
-      enemies      = [];
-      bullets      = [];
-      enemyBullets = [];
-      energies     = [];
-      isGreen      = false;
-      screenFrame.classList.remove('green');
-      tutorialHint.classList.add('hidden');
-
-      if (clearSub) {
-        if (reason === 'bossKill') {
-          clearSub.textContent = '자넨 최고의 오서독서가 될 자질을 가졌구만.';
-        } else {
-          // 보스 스테이지에서 귀환 버튼으로 클리어했을 때
-          clearSub.textContent = '자넨 뛰어난 오서독서의 자질을 가졌구만.';
-        }
-      }
-
-      // 클리어 화면에서도 귀환 버튼은 비활성
-      returnButton.classList.add('disabled');
-      returnButton.classList.remove('active');
-
-      clearOverlay.classList.remove('hidden');
-    }
-
     // ===== 메인 업데이트 =====
     function update(dt) {
       if (gameMode !== 'play') return;
       if (!player) return;
+
+      // === 조이스틱 이동 속도 기반 가속 계산 ===
+      const dJoyX = joyTargetX - prevJoyTargetX;
+      const dJoyY = joyTargetY - prevJoyTargetY;
+      const distJoy = Math.hypot(dJoyX, dJoyY);
+      const rawJoySpeed = distJoy / Math.max(dt, 0.001);   // 1초당 변화량
+
+      // 너무 크지 않게 0 ~ 0.6 정도 캡
+      joySpeedBoost = Math.min(0.6, rawJoySpeed / 30);
+
+      prevJoyTargetX = joyTargetX;
+      prevJoyTargetY = joyTargetY;
+      // ==============================
 
       runTime += dt;
       stats.totalSurvivalTime += dt;
@@ -1242,6 +1247,7 @@
       if (meta.stageLevel !== 4) {
         spawnTimer -= dt;
         if (spawnTimer <= 0) {
+          // 2마리씩 스폰
           spawnEnemy();
           spawnEnemy();
           const diffMul = 1 + 0.15 * meta.stageLevel + 0.15 * cycleCount;
@@ -1249,33 +1255,40 @@
         }
       }
 
-      // 조이스틱 방향 보간 (더 빠르게 반응)
-      const follow = Math.min(1, dt * 30); // 24 -> 30으로 증가
+      // 조이스틱 방향 보간 (더 빠르게, 중앙에서도 민감하게)
+      const follow = Math.min(1, dt * 40); // 반응 속도
       joySmoothX += (joyTargetX - joySmoothX) * follow;
       joySmoothY += (joyTargetY - joySmoothY) * follow;
 
-      let mvx = joySmoothX;
-      let mvy = joySmoothY;
-      let mlen = Math.hypot(mvx, mvy);
+      // 플레이어 이동
+      let mvx = 0;
+      let mvy = 0;
+      let mlen = 0;
 
-      if (mlen < 0.02) {
-        mvx = 0;
-        mvy = 0;
-        mlen = 0;
-      } else {
-        mvx /= mlen;
-        mvy /= mlen;
+      const rawLen = Math.hypot(joySmoothX, joySmoothY);
+      if (rawLen > JOY_DEAD_ZONE) {
+        const norm = (rawLen - JOY_DEAD_ZONE) / (1 - JOY_DEAD_ZONE); // 0 ~ 1
+        mlen = Math.min(1, Math.sqrt(norm));  // sqrt로 중앙 근처 민감도↑
+        mvx = joySmoothX / rawLen;
+        mvy = joySmoothY / rawLen;
       }
 
       if (mlen > 0) {
-        const speed = getPlayerSpeed() * mlen;
+        const baseSpeed = getPlayerSpeed();
+        // 거리(mlen) + 드래그 속도(joySpeedBoost) 조합
+        const speedFactor = Math.min(1.6, mlen + joySpeedBoost);
+        const speed = baseSpeed * speedFactor;
+
         player.x += mvx * speed * dt;
         player.y += mvy * speed * dt;
       }
 
-      // 화면 밖으로 못 나가게 (위/아래/좌우 전체 캔버스 기준)
-      player.x = Math.max(player.radius, Math.min(viewW - player.radius, player.x));
-      player.y = Math.max(player.radius, Math.min(viewH - player.radius, player.y));
+      // 위/아래/좌우 벽 처리 (플레이어가 화면 밖이나 조이스틱 영역 아래로 내려가지 않도록)
+      const topMargin = 12;
+      player.x = Math.max(player.radius,
+                          Math.min(viewW - player.radius, player.x));
+      player.y = Math.max(player.radius + topMargin,
+                          Math.min(viewH - PLAYABLE_BOTTOM_MARGIN - player.radius, player.y));
 
       // 적 이동 / 공격
       for (let i = enemies.length - 1; i >= 0; i--) {
@@ -1305,12 +1318,19 @@
         e.x += (dx / dist) * speed * dt;
         e.y += (dy / dist) * speed * dt;
 
+        // 적도 위/아래 벽에 막히도록
+        e.x = Math.max(e.radius,
+                       Math.min(viewW - e.radius, e.x));
+        e.y = Math.max(e.radius,
+                       Math.min(viewH - PLAYABLE_BOTTOM_MARGIN - e.radius, e.y));
+
         if (dist < player.radius + e.radius) {
           const contactDps = (e.type === 'dasher') ? 36 : 16;
           damagePlayer(contactDps * dt);
         }
       }
 
+      // 보스
       if (meta.stageLevel === 4) {
         updateBoss(dt);
       }
@@ -1637,8 +1657,9 @@
     }
     requestAnimationFrame(loop);
 
-    // #restart 해시로 들어온 경우 → 완전 재시작
+    // ▼ 해시가 #restart 인 상태로 들어온 경우 → 즉시 1스테이지부터 다시 시작
     if (location.hash === '#restart') {
+      // 주소창에서 #restart 제거
       if (history.replaceState) {
         history.replaceState(null, '', location.pathname + location.search);
       } else {
