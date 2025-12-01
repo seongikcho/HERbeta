@@ -102,34 +102,36 @@
       opacity: 0.4;
     }
 
-    /* 모바일 조이스틱 (플로팅, 화면 왼쪽 절반 입력 영역) */
+    /* 모바일 조이스틱 (작게) */
     #joystick {
       position: fixed;
-      left: 0;
-      bottom: 0;
-      width: 50vw;      /* 왼쪽 절반이 입력 영역 */
-      height: 100vh;    /* 세로 전체 */
+      left: 12px;
+      bottom: 18px;
+      width: 90px;
+      height: 90px;
       z-index: 10;
       touch-action: none;
     }
     #stick-base {
       position: absolute;
+      left: 0;
+      bottom: 0;
       width: 80px;
       height: 80px;
       border-radius: 50%;
       background: rgba(0,0,0,0.6);
       border: 2px solid rgba(255,255,255,0.2);
-      transform: translate(-50%, -50%);
-      display: none;
     }
     #stick-knob {
       position: absolute;
+      left: 50%;
+      top: 50%;
       width: 34px;
       height: 34px;
+      margin-left: -17px;
+      margin-top: -17px;
       border-radius: 50%;
       background: rgba(255,255,255,0.7);
-      transform: translate(-50%, -50%);
-      display: none;
     }
 
     /* 오버레이 공통 */
@@ -169,7 +171,6 @@
       font-weight: 600;
       box-shadow: 0 0 12px rgba(0,255,153,0.7);
       touch-action: manipulation;
-      margin-top: 8px;
     }
 
     /* 튜토리얼 힌트 (크게) */
@@ -267,31 +268,25 @@
       text-shadow: 0 0 4px rgba(0,0,0,0.8);
     }
 
-    /* 패배 스코어 표시 */
-    .dead-score {
-      margin-top: 6px;
-      margin-bottom: 20px;
+    /* 패배 스코어 */
+    #deadScoreWrap {
+      margin-top: 8px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    #deadScoreBreakdown {
       font-size: 13px;
-      line-height: 1.6;
-      text-align: left;
-    }
-    .dead-score-line {
-      margin-bottom: 3px;
-    }
-    .dead-score-total-label {
-      margin-top: 10px;
-      font-size: 14px;
+      line-height: 1.7;
       opacity: 0.9;
-      text-align: center;
+      white-space: pre-line;
     }
-    .dead-score-total-value {
-      margin-top: 6px;
-      margin-bottom: 10px;
+    #deadScoreFinal {
+      margin-top: 12px;
       font-size: 22px;
-      font-weight: 700;
-      color: #00ff99;
-      text-shadow: 0 0 10px rgba(0,255,153,0.85);
-      text-align: center;
+      font-weight: 800;
+      color: #00ffcc;
+      text-shadow: 0 0 12px rgba(0,255,204,0.9);
+      letter-spacing: 0.04em;
     }
   </style>
 </head>
@@ -320,7 +315,7 @@
   </div>
 
   <!-- 하단 안내 -->
-  <div id="smallHint">왼쪽 화면을 드래그해서 이동, 달이 초록색일 때 오른쪽 버튼으로 현실로 귀환</div>
+  <div id="smallHint">왼쪽 동그라미를 드래그해서 이동, 달이 초록색일 때 오른쪽 버튼으로 현실로 귀환</div>
 
   <!-- 튜토리얼 힌트 -->
   <div id="tutorialHint" class="hidden">
@@ -379,19 +374,9 @@
       모두 초기화됩니다.
     </div>
 
-    <div id="deadScore" class="dead-score">
-      <div class="dead-score-line">
-        처치한 디소더 수 : <span id="scoreEnemies">0</span>
-      </div>
-      <div class="dead-score-line">
-        총 버틴 시간 : <span id="scoreTimeText">00:00</span> (<span id="scoreTime">0</span>초)
-      </div>
-      <div class="dead-score-line">
-        총 획득한 에너지량 : <span id="scoreEnergy">0</span>
-      </div>
-
-      <div class="dead-score-total-label">총 스코어</div>
-      <div id="scoreTotal" class="dead-score-total-value">0</div>
+    <div id="deadScoreWrap">
+      <div id="deadScoreBreakdown"></div>
+      <div id="deadScoreFinal"></div>
     </div>
 
     <button id="deadRestart" class="overlay-btn">처음부터 다시</button>
@@ -406,7 +391,7 @@
     <button id="clearRestart" class="overlay-btn">처음부터 다시</button>
   </div>
 
-  <!-- 음산 BGM (bgm.mp3를 같은 폴더에 두면 재생됨) -->
+  <!-- 음산 BGM -->
   <audio id="bgm" src="bgm.mp3" loop></audio>
 
   <script>
@@ -452,11 +437,8 @@
     const clearOverlay   = document.getElementById('clearOverlay');
     const clearRestart   = document.getElementById('clearRestart');
 
-    const scoreEnemiesEl   = document.getElementById('scoreEnemies');
-    const scoreTimeEl      = document.getElementById('scoreTime');
-    const scoreTimeTextEl  = document.getElementById('scoreTimeText');
-    const scoreEnergyEl    = document.getElementById('scoreEnergy');
-    const scoreTotalEl     = document.getElementById('scoreTotal');
+    const deadScoreBreakdown = document.getElementById('deadScoreBreakdown');
+    const deadScoreFinal     = document.getElementById('deadScoreFinal');
 
     const bgm = document.getElementById('bgm');
     let bgmStarted = false;
@@ -470,7 +452,7 @@
       bgmStarted = true;
     }
 
-    // ===== 조이스틱 (플로팅 방식) =====
+    // ===== 조이스틱 =====
     let joyActive = false;
     let joyId = null;
     let joyCenterX = 0;
@@ -478,46 +460,39 @@
     let joyDirX = 0;
     let joyDirY = 0;
 
+    // 실제 이동 방향(부드럽게 회전용)
+    let moveDirX = 0;
+    let moveDirY = 0;
+    // 조이스틱 세기(0~1)
+    let joyPower = 0;
+
     function resetJoystick() {
       joyActive = false;
       joyId = null;
       joyDirX = 0;
       joyDirY = 0;
-      stickBase.style.display = 'none';
-      stickKnob.style.display = 'none';
+      moveDirX = 0;
+      moveDirY = 0;
+      joyPower = 0;
+      stickKnob.style.left = '50%';
+      stickKnob.style.top  = '50%';
     }
 
     function joystickTouchStart(e) {
       e.preventDefault();
       ensureBgm();
-
       const t = e.changedTouches[0];
       if (!t) return;
-
-      // 오른쪽 화면은 입력 무시 (왼쪽 절반만 이동)
-      if (t.clientX > window.innerWidth * 0.5) return;
-
       joyActive = true;
       joyId = t.identifier;
-
-      const rect = joystick.getBoundingClientRect();
-      joyCenterX = t.clientX;
-      joyCenterY = t.clientY;
-
-      // 손가락 위치에 조이스틱 표시
-      stickBase.style.display = 'block';
-      stickKnob.style.display = 'block';
-      stickBase.style.left = (t.clientX - rect.left) + 'px';
-      stickBase.style.top  = (t.clientY - rect.top) + 'px';
-      stickKnob.style.left = (t.clientX - rect.left) + 'px';
-      stickKnob.style.top  = (t.clientY - rect.top) + 'px';
-
+      const rect = stickBase.getBoundingClientRect();
+      joyCenterX = rect.left + rect.width / 2;
+      joyCenterY = rect.top + rect.height / 2;
       joystickTouchMove(e);
     }
 
     function joystickTouchMove(e) {
       if (!joyActive) return;
-
       const touches = e.touches;
       let t = null;
       for (let i = 0; i < touches.length; i++) {
@@ -527,34 +502,39 @@
         }
       }
       if (!t) return;
-
       const dx = t.clientX - joyCenterX;
       const dy = t.clientY - joyCenterY;
 
-      const maxR = 40;
+      const maxR = 26;
       let dist = Math.hypot(dx, dy);
       let nx = 0, ny = 0;
-
       if (dist > 0) {
         const clamped = Math.min(dist, maxR);
         nx = dx / dist;
         ny = dy / dist;
-
-        const rect = joystick.getBoundingClientRect();
         const knobX = joyCenterX + nx * clamped;
         const knobY = joyCenterY + ny * clamped;
-        stickKnob.style.left = (knobX - rect.left) + 'px';
-        stickKnob.style.top  = (knobY - rect.top) + 'px';
+        const rect = stickBase.getBoundingClientRect();
+        stickKnob.style.left = ((knobX - rect.left) / rect.width * 100) + '%';
+        stickKnob.style.top  = ((knobY - rect.top)  / rect.height * 100) + '%';
+      } else {
+        stickKnob.style.left = '50%';
+        stickKnob.style.top  = '50%';
       }
 
-      const deadZone = 0.03;
-      const len = Math.hypot(nx, ny);
-      if (len < deadZone) {
+      const deadZone = 0.10;
+      const power = Math.min(1, dist / maxR); // 0~1
+
+      if (power < deadZone) {
         joyDirX = 0;
         joyDirY = 0;
+        joyPower = 0;
       } else {
-        joyDirX = nx;
-        joyDirY = ny;
+        // 방향 벡터
+        const len = Math.hypot(nx, ny) || 1;
+        joyDirX = nx / len;
+        joyDirY = ny / len;
+        joyPower = power;
       }
     }
 
@@ -581,7 +561,13 @@
       attackLevel: 0,
       fireRateLevel: 0,
       moveSpeedLevel: 0,
-      stageLevel: 0   // 0~4
+      stageLevel: 0
+    };
+
+    const stats = {
+      totalKills: 0,
+      totalSurvivalTime: 0,
+      totalEnergyGained: 0
     };
 
     let player = null;
@@ -602,14 +588,9 @@
     let runEnergy = 0;
     let attackCooldown = 0;
 
-    // 세션 스코어 누적
-    let sessionEnemiesKilled = 0;
-    let sessionSurvivalTime = 0;
-    let sessionEnergyGained = 0;
-
     // ===== 밸런스 상수 =====
     const MELEE_RANGE = 80;
-    const BASE_SPAWN_INTERVAL = 1.3;
+    const BASE_SPAWN_INTERVAL = 1.35;
     const PLAYER_BASE_SPEED = 140;
 
     const ENEMY_BASE_SPEED = 38;
@@ -631,7 +612,7 @@
     const BULLET_KNOCKBACK = 10;
     const MELEE_KNOCKBACK  = 18;
 
-    const BOSS_CONTACT_DPS        = 18;
+    const BOSS_CONTACT_DPS        = 12;
     const BOSS_BULLET_DAMAGE_MULT = 0.7;
 
     const BASE_ATTACK_COOLDOWN = 0.45;
@@ -695,6 +676,22 @@
       }
     }
 
+    function updateDeadScoreUI() {
+      if (!deadScoreBreakdown || !deadScoreFinal) return;
+
+      const kills = stats.totalKills || 0;
+      const totalTimeSec = Math.floor(stats.totalSurvivalTime || 0);
+      const totalEnergy = stats.totalEnergyGained || 0;
+      const totalScore = kills + totalTimeSec + totalEnergy;
+
+      deadScoreBreakdown.textContent =
+        `처치한 디소더 수 : ${kills}\n` +
+        `총 버틴 시간      : ${totalTimeSec}초\n` +
+        `총 획득 에너지    : ${totalEnergy}`;
+
+      deadScoreFinal.textContent = `총 스코어 : ${totalScore}`;
+    }
+
     function resetAllProgress() {
       meta.totalEnergy    = 0;
       meta.attackLevel    = 0;
@@ -710,10 +707,6 @@
       greenTimer  = 0;
       spawnTimer  = 0;
       attackCooldown = 0;
-
-      sessionEnemiesKilled = 0;
-      sessionSurvivalTime  = 0;
-      sessionEnergyGained  = 0;
     }
 
     function resetRunForCurrentStage() {
@@ -741,7 +734,7 @@
       player = {
         x: viewW / 2,
         y: viewH / 2,
-        radius: 5,
+        radius: 8,
         hp: 100,
         maxHp: 100
       };
@@ -756,8 +749,8 @@
           x: viewW / 2,
           y: viewH / 3,
           radius: player.radius * 1.2,
-          hp: 2800,
-          maxHp: 2800,
+          hp: 28000,
+          maxHp: 28000,
           baseSpeed: 45,
           patternCooldown: 1.0
         };
@@ -768,29 +761,17 @@
 
     function hardRestart() {
       resetAllProgress();
+      stats.totalKills = 0;
+      stats.totalSurvivalTime = 0;
+      stats.totalEnergyGained = 0;
       resetRunForCurrentStage();
-    }
-
-    function updateDeadScoreUI() {
-      const kills = sessionEnemiesKilled;
-      const timeSec = Math.floor(sessionSurvivalTime);
-      const energy = sessionEnergyGained;
-      const total = kills + timeSec + energy;
-
-      if (scoreEnemiesEl) scoreEnemiesEl.textContent = kills;
-      if (scoreTimeEl) scoreTimeEl.textContent = timeSec;
-      if (scoreTimeTextEl) scoreTimeTextEl.textContent = formatTime(timeSec);
-      if (scoreEnergyEl) scoreEnergyEl.textContent = energy;
-      if (scoreTotalEl) scoreTotalEl.textContent = total;
     }
 
     function onPlayerDead() {
       gameMode = 'dead';
 
-      // 스코어 계산 및 표시
       updateDeadScoreUI();
 
-      // 패배 시 진행 정보는 초기화 (설명대로)
       resetAllProgress();
 
       enemies      = [];
@@ -871,7 +852,6 @@
       startGameFromTitle();
     }, {passive:false});
 
-    // ▼ 여기부터 "처음부터 다시" 완전 재시작 로직 ▼
     function restartFromScratch() {
       location.hash = '#restart';
       location.reload();
@@ -900,13 +880,12 @@
     function chooseEnemyType() {
       let stage = meta.stageLevel;
 
-      // 튜토리얼에서 오래 버티면 다른 적 등장
       if (stage === 0) {
         if (cycleCount >= 2) stage = 2;
         else if (cycleCount >= 1) stage = 1;
       }
 
-      if (stage >= 4) stage = 3; // 5스테는 보스
+      if (stage >= 4) stage = 3;
 
       const r = Math.random();
       if (stage === 0) {
@@ -923,7 +902,7 @@
         else if (r < 0.55) return 'fast';
         else if (r < 0.75) return 'slow';
         else if (r < 0.88) return 'runner';
-        else return 'spreader'; // 12%
+        else return 'spreader';
       }
     }
 
@@ -1046,7 +1025,8 @@
         boss.hp = 0;
         boss = null;
         runEnergy += 8;
-        // 클리어 시에도 세션 에너지는 이미 sessionEnergyGained에 누적되어 있음
+        stats.totalKills += 1;
+        stats.totalEnergyGained += 8;
         onGameClear();
       }
     }
@@ -1161,9 +1141,9 @@
       if (!player) return;
 
       runTime += dt;
-      sessionSurvivalTime += dt;
-
+      stats.totalSurvivalTime += dt;
       cycleTime += dt;
+
       if (!isGreen && cycleTime >= 29.5) {
         isGreen = true;
         greenTimer = 2.0;
@@ -1187,23 +1167,53 @@
         spawnTimer -= dt;
         if (spawnTimer <= 0) {
           spawnEnemy();
-          spawnEnemy(); // 2배
+          spawnEnemy();
           const diffMul = 1 + 0.15 * meta.stageLevel + 0.15 * cycleCount;
           spawnTimer = (BASE_SPAWN_INTERVAL / diffMul) * (0.7 + Math.random() * 0.6);
         }
       }
 
-      // 플레이어 이동
-      let mvx = joyDirX;
-      let mvy = joyDirY;
-      if (mvx !== 0 || mvy !== 0) {
-        const len = Math.hypot(mvx, mvy) || 1;
-        mvx /= len;
-        mvy /= len;
-        const speed = getPlayerSpeed();
+      // ===== 플레이어 이동 (드래그 방향에 빠르게 반응 + 약간의 부드러운 전환) =====
+      let targetX = joyDirX;
+      let targetY = joyDirY;
+
+      const tLen = Math.hypot(targetX, targetY);
+      if (tLen > 1e-4) {
+        targetX /= tLen;
+        targetY /= tLen;
+      } else {
+        targetX = 0;
+        targetY = 0;
+      }
+
+      // 빠른 반응감을 위해 LERP 계수 크게
+      const TURN_LERP = 18; // 값이 클수록 방향 전환이 더 빠름
+      const lerp = Math.min(1, dt * TURN_LERP);
+      moveDirX += (targetX - moveDirX) * lerp;
+      moveDirY += (targetY - moveDirY) * lerp;
+
+      // 입력이 없으면 비교적 빨리 감쇠해 멈추게
+      if (joyPower === 0 && tLen === 0) {
+        const DAMP = Math.min(1, dt * 12);
+        moveDirX *= (1 - DAMP);
+        moveDirY *= (1 - DAMP);
+      }
+
+      let mvx = moveDirX;
+      let mvy = moveDirY;
+      const mLen = Math.hypot(mvx, mvy);
+      if (mLen > 1e-3) {
+        mvx /= mLen;
+        mvy /= mLen;
+
+        // 손가락 거리에 따라 속도 조절 (최소 50% ~ 최대 100%)
+        const speedFactor = 0.5 + 0.5 * joyPower;
+        const speed = getPlayerSpeed() * speedFactor;
+
         player.x += mvx * speed * dt;
         player.y += mvy * speed * dt;
       }
+
       player.x = Math.max(player.radius, Math.min(viewW - player.radius, player.x));
       player.y = Math.max(player.radius, Math.min(viewH - player.radius, player.y));
 
@@ -1241,7 +1251,6 @@
         }
       }
 
-      // 보스
       if (meta.stageLevel === 4) {
         updateBoss(dt);
       }
@@ -1343,12 +1352,12 @@
         if (hit) bullets.splice(i, 1);
       }
 
-      // 적 사망 → 에너지 + 킬 카운트
+      // 적 사망 → 에너지
       for (let i = enemies.length - 1; i >= 0; i--) {
         const e = enemies[i];
         if (e.hp <= 0) {
           enemies.splice(i, 1);
-          sessionEnemiesKilled++;
+          stats.totalKills += 1;
           const amount = getEnergyAmountForType(e.type);
           let r = 3;
           if (amount === 2) r = 5;
@@ -1395,7 +1404,7 @@
         const dist = Math.hypot(dx, dy);
         if (dist < player.radius + g.radius) {
           runEnergy += g.amount;
-          sessionEnergyGained += g.amount;
+          stats.totalEnergyGained += g.amount;
           energies.splice(i, 1);
         }
       }
@@ -1434,7 +1443,7 @@
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, viewW, viewH);
 
-      // 달 (우측 상단)
+      // 달
       const moonX = viewW - 60;
       const moonY = 50;
       ctx.save();
@@ -1568,7 +1577,7 @@
     }
     requestAnimationFrame(loop);
 
-    // ▼ 해시가 #restart 인 상태로 들어온 경우 → 즉시 1스테이지부터 다시 시작
+    // #restart로 진입 시 바로 재시작
     if (location.hash === '#restart') {
       if (history.replaceState) {
         history.replaceState(null, '', location.pathname + location.search);
@@ -1576,10 +1585,13 @@
         location.hash = '';
       }
       resetAllProgress();
+      stats.totalKills = 0;
+      stats.totalSurvivalTime = 0;
+      stats.totalEnergyGained = 0;
       resetRunForCurrentStage();
     }
 
-    // ===== 서비스워커 (옵션) =====
+    // ===== 서비스워커 =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -1588,5 +1600,3 @@
   </script>
 </body>
 </html>
-
-
