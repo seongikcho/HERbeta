@@ -721,10 +721,10 @@
       return PLAYER_BASE_SPEED * (1 + 0.1 * meta.moveSpeedLevel);
     }
     function getBulletDamage() {
-      return 21 * (1 + 0.35 * meta.attackLevel);
+      return 21 * (1 + 0.3 * meta.attackLevel);
     }
     function getMeleeDamage() {
-      return 35 * (1 + 0.35 * meta.attackLevel);
+      return 35 * (1 + 0.3 * meta.attackLevel);
     }
 
     function updateUpgradeUI() {
@@ -1283,7 +1283,7 @@
         if (spawnTimer <= 0) {
           spawnEnemy();
           spawnEnemy(); // 기본 2배 스폰
-          const diffMul = 1 + 0.15 * meta.stageLevel + 0.15 * cycleCount;
+          const diffMul = 1 + 0.2 * meta.stageLevel + 0.45 * cycleCount;
           spawnTimer = (BASE_SPAWN_INTERVAL / diffMul) * (0.7 + Math.random() * 0.6);
         }
       }
@@ -1373,7 +1373,7 @@
         }
 
         if (nearest) {
-          const fireRateMul = 1 + 0.25 * meta.fireRateLevel;
+          const fireRateMul = 1 + 0.2 * meta.fireRateLevel;
           const dx = nearest.x - player.x;
           const dy = nearest.y - player.y;
           const dist = Math.hypot(dx, dy) || 1;
@@ -1691,5 +1691,6 @@
   </script>
 </body>
 </html>
+
 
 
