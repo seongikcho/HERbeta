@@ -721,10 +721,10 @@
       return PLAYER_BASE_SPEED * (1 + 0.1 * meta.moveSpeedLevel);
     }
     function getBulletDamage() {
-      return 21 * (1 + 0.3 * meta.attackLevel);
+      return 21 * (1 + 0.35 * meta.attackLevel);
     }
     function getMeleeDamage() {
-      return 35 * (1 + 0.3 * meta.attackLevel);
+      return 35 * (1 + 0.35 * meta.attackLevel);
     }
 
     function updateUpgradeUI() {
@@ -1185,8 +1185,8 @@
       } else if (pattern === 1) {
         const angles = [-0.18, 0, 0.18];
         const speeds = [
-          ENEMY_BULLET_SPEED * 1.3,
-          ENEMY_BULLET_SPEED * 1.1,
+          ENEMY_BULLET_SPEED * 1.2,
+          ENEMY_BULLET_SPEED * 1.0,
           ENEMY_BULLET_SPEED * 0.9
         ];
         for (let k = 0; k < angles.length; k++) {
@@ -1217,7 +1217,7 @@
           spawnEnemyBullet(
             boss.x, boss.y,
             vx, vy,
-            ENEMY_BULLET_SPEED * 1.3,
+            ENEMY_BULLET_SPEED * 1.2,
             ENEMY_BULLET_DAMAGE * 0.7 * BOSS_BULLET_DAMAGE_MULT
           );
         }
@@ -1283,7 +1283,7 @@
         if (spawnTimer <= 0) {
           spawnEnemy();
           spawnEnemy(); // 기본 2배 스폰
-          const diffMul = 1 + 0.2 * meta.stageLevel + 0.3 * cycleCount;
+          const diffMul = 1 + 0.2 * meta.stageLevel + 0.25 * cycleCount;
           spawnTimer = (BASE_SPAWN_INTERVAL / diffMul) * (0.7 + Math.random() * 0.6);
         }
       }
@@ -1691,6 +1691,7 @@
   </script>
 </body>
 </html>
+
 
 
 
