@@ -667,10 +667,10 @@
       smallHint.textContent = text || '';
       smallHint.classList.add('visible');
 
-      if (hintTimeout) clearTimeout(hintTimeout);
-      hintTimeout = setTimeout(() => {
-        smallHint.classList.remove('visible');
-      }, 5000);
+      if (hintTimeout) {
+        clearTimeout(hintTimeout);
+        hintTimeout = null;
+      }
     }
 
     // ===== 밸런스 상수 =====
@@ -1691,3 +1691,4 @@
   </script>
 </body>
 </html>
+
